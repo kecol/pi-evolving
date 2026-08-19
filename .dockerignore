@@ -1,0 +1,7 @@
+.git
+.env
+backups
+*.log
+.DS_Store
+Thumbs.db
+PI_EVOLVING_REPOSITORY_BUILD_BRIEF.md

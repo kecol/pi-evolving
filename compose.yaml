@@ -1,0 +1,27 @@
+services:
+  pi:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+      args:
+        PI_UID: ${PI_UID:-1001}
+        PI_GID: ${PI_GID:-1001}
+    image: ${PI_IMAGE:-pi-evolving:local}
+    stdin_open: true
+    tty: true
+    environment:
+      PI_SKIP_VERSION_CHECK: "1"
+      PI_PROVIDER: "${PI_PROVIDER:-}"
+      PI_MODEL: "${PI_MODEL:-}"
+    volumes:
+      - pi-source:/pi
+      - pi-agent-state:/home/pi/.pi-agent
+      - pi-evolution-state:/evolution
+
+volumes:
+  pi-source:
+    name: pi-evolving-source
+  pi-agent-state:
+    name: pi-evolving-agent-state
+  pi-evolution-state:
+    name: pi-evolving-evolution-state
