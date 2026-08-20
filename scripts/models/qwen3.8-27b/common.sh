@@ -7,6 +7,7 @@ QWEN_REPO_ROOT="$(cd -- "$QWEN_SCRIPT_DIR/../../.." && pwd)"
 QWEN_PROFILE_TEMPLATE="$QWEN_REPO_ROOT/models/qwen3.8-27b/model.env.example"
 QWEN_CONFIG_HOME="${XDG_CONFIG_HOME:-$HOME/.config}/pi-evolving/models"
 QWEN_PROFILE_FILE="${QWEN38_PROFILE_FILE:-$QWEN_CONFIG_HOME/qwen3.8-27b.env}"
+QWEN_EXPECTED_PORT="18080"
 
 qwen_die() {
   printf 'Error: %s\n' "$*" >&2
@@ -36,4 +37,10 @@ qwen_load_profile() {
   : "${LLAMA_ARG_ALIAS:?LLAMA_ARG_ALIAS is required in $QWEN_PROFILE_FILE}"
   : "${LLAMA_ARG_PORT:?LLAMA_ARG_PORT is required in $QWEN_PROFILE_FILE}"
   : "${LLAMA_API_KEY:?LLAMA_API_KEY is required in $QWEN_PROFILE_FILE}"
+}
+
+qwen_require_profile_port() {
+  if [[ "$LLAMA_ARG_PORT" != "$QWEN_EXPECTED_PORT" ]]; then
+    qwen_die "Profile $QWEN_PROFILE_FILE uses port $LLAMA_ARG_PORT, but Pi expects $QWEN_EXPECTED_PORT. Update LLAMA_ARG_PORT in that file."
+  fi
 }

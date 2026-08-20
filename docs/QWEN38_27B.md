@@ -72,6 +72,14 @@ Subsequent runs reuse the user profile at
 `~/.config/pi-evolving/models/qwen3.8-27b.env`. Edit that file for persistent
 local changes.
 
+Profiles created before the Qwen-specific port changed from 8080 to 18080 are
+not overwritten. Migrate an existing profile once:
+
+```bash
+sed -i 's/LLAMA_ARG_PORT="8080"/LLAMA_ARG_PORT="18080"/' \
+  "${XDG_CONFIG_HOME:-$HOME/.config}/pi-evolving/models/qwen3.8-27b.env"
+```
+
 Inspect the resolved paths before downloading roughly 17--19 GB:
 
 ```bash
@@ -141,6 +149,7 @@ The chosen defaults are:
 | Quantization | `UD-Q4_K_XL` | Recommended quality/memory balance |
 | GPU layers | `all` | Keep all model layers on the GPU |
 | Server context | `73728` | 65,536-token Pi window plus server headroom |
+| Server port | `18080` | Avoid common Jupyter and development-server collisions |
 | Parallel slots | `1` | Dedicate the KV cache to one coding-agent session |
 | K/V cache | `q4_0` | Reduce long-context VRAM use |
 | Flash attention | `on` | Improve supported CUDA attention performance |
@@ -161,7 +170,7 @@ llama-server --ctx-size 32768 \
 
 `local-dev-key` is a compatibility placeholder used by Pi Evolving, not a
 secret. Binding to `0.0.0.0` is needed for container access, so do not expose
-port 8080 through a router or to an untrusted network. Use a private value in
+port 18080 through a router or to an untrusted network. Use a private value in
 both llama-server and Pi's model configuration if the host is reachable by
 other users.
 

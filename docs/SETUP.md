@@ -114,7 +114,8 @@ Install and select the preset without manually writing JSON:
 ### First setup with Qwen3.8-27B
 
 The explicit Qwen profile uses Unsloth's quantized `UD-Q4_K_XL` GGUF. Download
-and start it from WSL2 or Linux first:
+and start it from WSL2 or Linux first. Its dedicated default port is `18080`,
+avoiding the commonly occupied port 8080 used by the generic preset:
 
 ```bash
 ./scripts/models/qwen3.8-27b/download.sh

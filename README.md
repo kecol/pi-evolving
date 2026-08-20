@@ -45,7 +45,8 @@ the Unsloth `UD-Q4_K_XL` GGUF from WSL2 or Linux:
 
 Keep the server running, then initialize Pi in another shell. Selecting the
 profile makes setup verify the server before building, install the matching Pi
-configuration, and run a completion smoke test:
+configuration, and run a completion smoke test. This dedicated profile uses
+port `18080` rather than the generic llama.cpp preset's port 8080:
 
 ```bash
 ./setup.sh --model qwen3.8-27b

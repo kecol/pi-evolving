@@ -8,6 +8,7 @@ source "$SCRIPT_DIR/common.sh"
 [[ $# -eq 0 ]] || qwen_die "Usage: ./scripts/models/qwen3.8-27b/serve.sh"
 qwen_require llama-server "llama-server not found on PATH. Follow docs/LLAMA_CPP.md first."
 qwen_load_profile
+qwen_require_profile_port
 
 [[ "$MODEL_QUANT" == "UD-Q4_K_XL" ]] || \
   qwen_die "This first-run profile requires the quantized UD-Q4_K_XL model; found $MODEL_QUANT."

@@ -21,7 +21,7 @@ if [[ "${PI_SKIP_LOCAL_MODEL_CHECK:-0}" != 1 ]]; then
   trap 'rm -f "$models_response" "$completion_response"' EXIT
   if ! curl "${curl_args[@]}" "$base_url/models" > "$models_response"; then
     echo "Error: llama.cpp is not reachable from the container." >&2
-    echo "Start llama-server with --host 0.0.0.0 --port 8080, then retry." >&2
+    echo "Start llama-server at the configured endpoint ($base_url), then retry." >&2
     echo "Use --skip-check only if you intentionally want to install the preset while the server is offline." >&2
     exit 1
   fi

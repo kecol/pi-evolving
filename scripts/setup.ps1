@@ -10,17 +10,22 @@ Assert-Docker
 
 Write-Phase "2/10" "Checking requested model"
 if ($Model -eq "qwen3.8-27b") {
-    $headers = @{ Authorization = "Bearer local-dev-key" }
+    $qwenProfilePath = Join-Path $Script:RepoRoot "models/qwen3.8-27b/models.json"
+    $qwenProfile = Get-Content -LiteralPath $qwenProfilePath -Raw | ConvertFrom-Json
+    $qwenProvider = $qwenProfile.providers.'llamacpp-wsl'
+    $qwenHostBaseUrl = $qwenProvider.baseUrl.Replace("host.docker.internal", "localhost")
+    $qwenModelId = $qwenProvider.models[0].id
+    $headers = @{ Authorization = "Bearer $($qwenProvider.apiKey)" }
     try {
-        $models = Invoke-RestMethod -Method Get -Uri "http://localhost:8080/v1/models" -Headers $headers -TimeoutSec 10
+        $models = Invoke-RestMethod -Method Get -Uri "$qwenHostBaseUrl/models" -Headers $headers -TimeoutSec 10
     } catch {
-        throw "Qwen3.8 llama-server is unavailable at http://localhost:8080/v1. Start scripts/models/qwen3.8-27b/serve.sh in WSL2, then retry. $($_.Exception.Message)"
+        throw "Qwen3.8 llama-server is unavailable at $qwenHostBaseUrl. Start scripts/models/qwen3.8-27b/serve.sh in WSL2, then retry. $($_.Exception.Message)"
     }
     $modelIds = @($models.data | ForEach-Object { $_.id })
-    if ($modelIds -notcontains "local-coder") {
-        throw "The llama.cpp endpoint responded, but model alias 'local-coder' was not listed."
+    if ($modelIds -notcontains $qwenModelId) {
+        throw "The llama.cpp endpoint responded, but model alias '$qwenModelId' was not listed."
     }
-    Write-Host "Found model alias: local-coder"
+    Write-Host "Found model alias: $qwenModelId"
 } else {
     Write-Host "No explicit model profile requested; continuing with Pi model selection."
 }

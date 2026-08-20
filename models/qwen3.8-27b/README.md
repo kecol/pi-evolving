@@ -13,5 +13,6 @@ llama.cpp. It is the explicit first-run model selected by:
 
 The setup command expects a compatible llama-server to be running already. Use
 the scripts under `scripts/models/qwen3.8-27b` to download, serve, and check the
-model. See [the full deployment guide](../../docs/QWEN38_27B.md) for hardware,
-memory, and WSL2 guidance.
+model. The Qwen profile uses port `18080`; the generic llama.cpp preset retains
+port 8080. See [the full deployment guide](../../docs/QWEN38_27B.md) for
+hardware, memory, and WSL2 guidance.

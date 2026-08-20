@@ -14,6 +14,7 @@ esac
 
 qwen_require curl "curl is required to check llama-server."
 qwen_load_profile
+qwen_require_profile_port
 
 base_url="${QWEN38_HOST_BASE_URL:-http://localhost:$LLAMA_ARG_PORT/v1}"
 response_file="$(mktemp)"
