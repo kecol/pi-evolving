@@ -73,7 +73,9 @@ Reset operations are explicit and confirmed; see [setup and operations](docs/SET
 
 The repository includes `config/models.llamacpp-wsl.json` for a llama.cpp
 server running under WSL2 on port 8080. Start the server with a network-visible
-listener, then enable the preset:
+listener, then enable the preset. See the full
+[llama.cpp build and setup guide](docs/LLAMA_CPP.md) for CUDA prerequisites,
+model selection, memory sizing, networking, and troubleshooting.
 
 ```bash
 llama-server --model /path/to/model.gguf --host 0.0.0.0 --port 8080
@@ -102,4 +104,5 @@ to a remote or mounts the host Docker socket.
 - [Setup and operations](docs/SETUP.md)
 - [Evolution model](docs/EVOLUTION.md)
 - [Generation 0 reference](docs/GENERATION_0.md)
+- [Build and run llama.cpp under WSL2](docs/LLAMA_CPP.md)
 - [Troubleshooting](docs/TROUBLESHOOTING.md)

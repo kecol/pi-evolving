@@ -94,6 +94,9 @@ The tracked `config/models.llamacpp-wsl.json` preset points to
 `http://host.docker.internal:8080/v1`. Run llama.cpp in WSL2 with a listener
 reachable through Docker Desktop:
 
+For CUDA installation, building, model selection, memory sizing, and detailed
+troubleshooting, read [Building llama.cpp for local models](LLAMA_CPP.md).
+
 ```bash
 llama-server --model /path/to/model.gguf --host 0.0.0.0 --port 8080
 ```
