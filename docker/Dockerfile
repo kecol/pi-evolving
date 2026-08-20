@@ -52,11 +52,14 @@ RUN existing_user="$(getent passwd "${PI_UID}" | cut -d: -f1 || true)" \
   && mkdir -p /workspace /pi /evolution /home/pi/.pi-agent/bin \
   && chown -R pi:pi /workspace /pi /evolution /home/pi
 
-RUN git config --system --add safe.directory /pi
+RUN git config --system --add safe.directory /pi \
+  && git config --system --add safe.directory /agent
 
 ENV HOME=/home/pi
 ENV PI_CODING_AGENT_DIR=/home/pi/.pi-agent
 ENV PATH="/home/pi/.pi-agent/bin:${PATH}"
+
+COPY --chmod=0755 scripts/container/agent-evolution.sh /usr/local/bin/pi-agent-evolution
 
 USER pi
 WORKDIR /workspace

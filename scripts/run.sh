@@ -12,6 +12,7 @@ shift
 workspace="$(realpath "$workspace_input")"
 
 require_initialized
+install_agent_evolution_if_configured
 base_mount_args
 pi_args=()
 if [[ -n "$PI_PROVIDER" ]]; then

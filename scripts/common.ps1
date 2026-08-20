@@ -29,6 +29,8 @@ $Script:PiHostPort = if ($env:PI_HOST_PORT) { $env:PI_HOST_PORT } else { "9191" 
 $Script:PiContainerPort = if ($env:PI_CONTAINER_PORT) { $env:PI_CONTAINER_PORT } else { "9191" }
 $Script:PiGitName = if ($env:PI_GIT_NAME) { $env:PI_GIT_NAME } else { "Pi Evolving Agent" }
 $Script:PiGitEmail = if ($env:PI_GIT_EMAIL) { $env:PI_GIT_EMAIL } else { "pi-evolving@local" }
+$Script:PiAgentEvolutionPath = if ($env:PI_AGENT_EVOLUTION_PATH) { $env:PI_AGENT_EVOLUTION_PATH } else { "" }
+$Script:PiAgentAutoInstall = if ($env:PI_AGENT_AUTO_INSTALL) { $env:PI_AGENT_AUTO_INSTALL } else { "1" }
 $Script:SourceVolume = "pi-evolving-source"
 $Script:AgentVolume = "pi-evolving-agent-state"
 $Script:EvolutionVolume = "pi-evolving-evolution-state"
@@ -78,12 +80,23 @@ function Assert-Initialized {
 }
 
 function Get-BaseMountArguments {
-    return @(
+    $arguments = @(
         "--add-host", "host.docker.internal:host-gateway",
         "--volume", "${Script:SourceVolume}:/pi",
         "--volume", "${Script:AgentVolume}:/home/pi/.pi-agent",
         "--volume", "${Script:EvolutionVolume}:/evolution"
     )
+    if ($Script:PiAgentEvolutionPath) {
+        if (-not [System.IO.Path]::IsPathFullyQualified($Script:PiAgentEvolutionPath)) {
+            throw "PI_AGENT_EVOLUTION_PATH must be an absolute path."
+        }
+        if (-not (Test-Path -LiteralPath $Script:PiAgentEvolutionPath -PathType Container)) {
+            throw "Agent evolution directory does not exist: $Script:PiAgentEvolutionPath"
+        }
+        $agentPath = (Resolve-Path -LiteralPath $Script:PiAgentEvolutionPath).Path
+        $arguments += @("--volume", "${agentPath}:/agent")
+    }
+    return $arguments
 }
 
 function Invoke-Maintenance {
@@ -108,4 +121,13 @@ function Invoke-ContainerScript {
     )
     $dockerArguments += $ScriptArguments
     Invoke-Docker $dockerArguments
+}
+
+function Install-AgentEvolutionIfConfigured {
+    if (-not $Script:PiAgentEvolutionPath) { return }
+    switch -Regex ($Script:PiAgentAutoInstall) {
+        '^(1|true|yes)$' { Invoke-ContainerScript -Name "agent-evolution.sh" -ScriptArguments @("install"); return }
+        '^(0|false|no)$' { Write-Host "Agent evolution auto-install is disabled."; return }
+        default { throw "PI_AGENT_AUTO_INSTALL must be 1 or 0 (also accepts true/false or yes/no)." }
+    }
 }

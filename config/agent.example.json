@@ -1,0 +1,10 @@
+{
+  "schemaVersion": 1,
+  "capabilities": [
+    {
+      "type": "extension",
+      "source": "extensions/goal.ts",
+      "target": "extensions/goal.ts"
+    }
+  ]
+}

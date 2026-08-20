@@ -7,7 +7,8 @@ Docker operations for inspection and recovery.
 
 On first setup, `.env.example` is copied to `.env`. Provider/model are blank by
 default; run Pi with `--list-models` before setting them explicitly. The file
-also controls ports, image name, and the Git identity used only inside `/pi`.
+also controls ports, image name, the Git identity used only inside `/pi`, and
+an optional agent-capability repository.
 Do not put API keys in the harness. Pi's normal authentication state belongs in
 its persistent agent-state volume.
 
@@ -36,6 +37,11 @@ existing checkout, Git changes, sessions, tools, and evolution records are not
 reset. If a global policy differs, setup timestamps a backup before updating
 the managed policy.
 
+When `PI_AGENT_EVOLUTION_PATH` is configured, setup and each `pi` launch mount
+that host repository at `/agent` and install its clean committed manifest into
+`.pi-agent`. No remote operation is performed. See [Agent capability
+evolution](AGENT_EVOLUTION.md).
+
 ## Equivalent manual Docker operations
 
 Build and create volumes:
@@ -56,6 +62,9 @@ docker run --rm --entrypoint bash \
   -v pi-evolving-evolution-state:/evolution \
   pi-evolving:local
 ```
+
+With agent evolution configured, these commands also bind-mount its absolute
+host path at `/agent`.
 
 Inside that shell, a fully manual first source initialization is:
 

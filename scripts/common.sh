@@ -29,6 +29,8 @@ PI_HOST_PORT="${PI_HOST_PORT:-9191}"
 PI_CONTAINER_PORT="${PI_CONTAINER_PORT:-9191}"
 PI_GIT_NAME="${PI_GIT_NAME:-Pi Evolving Agent}"
 PI_GIT_EMAIL="${PI_GIT_EMAIL:-pi-evolving@local}"
+PI_AGENT_EVOLUTION_PATH="${PI_AGENT_EVOLUTION_PATH:-}"
+PI_AGENT_AUTO_INSTALL="${PI_AGENT_AUTO_INSTALL:-1}"
 
 SOURCE_VOLUME="pi-evolving-source"
 AGENT_VOLUME="pi-evolving-agent-state"
@@ -64,6 +66,13 @@ base_mount_args() {
     --volume "$AGENT_VOLUME:/home/pi/.pi-agent"
     --volume "$EVOLUTION_VOLUME:/evolution"
   )
+  if [[ -n "$PI_AGENT_EVOLUTION_PATH" ]]; then
+    [[ "$PI_AGENT_EVOLUTION_PATH" == /* ]] || \
+      die "PI_AGENT_EVOLUTION_PATH must be an absolute path."
+    [[ -d "$PI_AGENT_EVOLUTION_PATH" ]] || \
+      die "Agent evolution directory does not exist: $PI_AGENT_EVOLUTION_PATH"
+    BASE_MOUNT_ARGS+=(--volume "$(realpath "$PI_AGENT_EVOLUTION_PATH"):/agent")
+  fi
 }
 
 maintenance_run() {
@@ -83,4 +92,13 @@ container_script_run() {
     "${BASE_MOUNT_ARGS[@]}" \
     --volume "$REPO_ROOT/scripts/container:/opt/pi-evolving:ro" \
     "$PI_IMAGE" "/opt/pi-evolving/$script_name" "$@"
+}
+
+install_agent_evolution_if_configured() {
+  [[ -n "$PI_AGENT_EVOLUTION_PATH" ]] || return 0
+  case "$PI_AGENT_AUTO_INSTALL" in
+    1|true|TRUE|yes|YES) container_script_run agent-evolution.sh install ;;
+    0|false|FALSE|no|NO) printf 'Agent evolution auto-install is disabled.\n' ;;
+    *) die "PI_AGENT_AUTO_INSTALL must be 1 or 0 (also accepts true/false or yes/no)." ;;
+  esac
 }

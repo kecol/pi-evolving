@@ -91,6 +91,7 @@ equivalent), then edit `PI_PROVIDER` and `PI_MODEL`. Extra arguments pass throug
 | Location | Storage | Purpose |
 |---|---|---|
 | `/pi` | `pi-evolving-source` volume | Pi source, Git lineage, dependencies, builds |
+| `/agent` | optional host bind mount | version-controlled reusable extensions, skills, and prompts |
 | `/home/pi/.pi-agent` | `pi-evolving-agent-state` volume | settings, sessions, auth metadata, acquired tools |
 | `/evolution` | `pi-evolving-evolution-state` volume | generations, observations, evaluations |
 | `/workspace` | host bind mount | the project supplied to `pi.sh`/`pi.ps1` |
@@ -106,6 +107,7 @@ the global evolution policy installed in Pi's runtime state.
 | Run on a project | `./pi.sh PATH` | `.\pi.ps1 PATH` |
 | Maintenance shell | `./shell.sh` | `.\shell.ps1` |
 | Full Pi tests | `./test.sh` | `.\test.ps1` |
+| Agent capabilities | `./scripts/agent.sh status` | `.\scripts\agent.ps1 status` |
 | Inspect lineage | `./scripts/history.sh` | `.\scripts\history.ps1` |
 | Inspect upstream | `./scripts/update.sh` | `.\scripts\update.ps1` |
 | Explicit rebase | `./scripts/update.sh --rebase` | `.\scripts\update.ps1 -Rebase` |
@@ -113,6 +115,24 @@ the global evolution policy installed in Pi's runtime state.
 | Check Qwen3.8 server | `./scripts/models/qwen3.8-27b/check.sh` | Run the Bash command in WSL2 |
 
 Reset operations are explicit and confirmed; see [setup and operations](docs/SETUP.md).
+
+### Version-controlled agent capabilities
+
+Reusable extensions, skills, and prompts can live in a separate Git repository
+mounted at `/agent`; `.pi-agent` remains installed runtime state. Set its
+absolute host path in `.env`:
+
+```dotenv
+PI_AGENT_EVOLUTION_PATH=/home/me/gits/pi-agent-evolution
+PI_AGENT_AUTO_INSTALL=1
+```
+
+Copy [`config/agent.example.json`](config/agent.example.json) to that
+repository as `agent.json` and declare the files to install. Setup and every Pi
+launch install its current committed state safely. They never fetch or pull,
+reject a dirty repository, and refuse to overwrite runtime drift. See the
+[agent evolution guide](docs/AGENT_EVOLUTION.md) for initial migration and
+candidate testing.
 
 ### Generic local llama.cpp preset
 
@@ -150,6 +170,7 @@ to a remote or mounts the host Docker socket.
 - [Architecture](docs/ARCHITECTURE.md)
 - [Setup and operations](docs/SETUP.md)
 - [Evolution model](docs/EVOLUTION.md)
+- [Agent capability evolution](docs/AGENT_EVOLUTION.md)
 - [Generation 0 reference](docs/GENERATION_0.md)
 - [Build and run llama.cpp on Linux or WSL2](docs/LLAMA_CPP.md)
 - [Deploy Qwen3.8-27B on a 24 GB or larger NVIDIA GPU](docs/QWEN38_27B.md)

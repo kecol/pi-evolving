@@ -11,6 +11,7 @@ if (-not (Test-Path -LiteralPath $Workspace -PathType Container)) {
 }
 $workspacePath = (Resolve-Path -LiteralPath $Workspace).Path
 Assert-Initialized
+Install-AgentEvolutionIfConfigured
 
 $dockerArguments = @("run", "--rm", "-it", "--name", $Script:ContainerName)
 $dockerArguments += Get-BaseMountArguments

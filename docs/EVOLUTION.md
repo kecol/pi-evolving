@@ -17,13 +17,13 @@ Useful adaptation often happens outside Pi core. Prefer, in order:
 
 1. a direct solution in the current project;
 2. a project helper or workflow;
-3. a reusable instruction, skill, extension, or user-level tool;
+3. a reusable instruction, skill, extension, or user-level tool in `/agent`;
 4. a harness/workflow improvement;
 5. a focused Pi core change;
 6. a reviewed Docker environment change.
 
-Before a `/pi` edit, state the observed friction, recurrence likelihood,
-missing capability, and expected observable improvement.
+Before an `/agent` or `/pi` edit, state the observed friction, recurrence
+likelihood, missing capability, and expected observable improvement.
 
 ## Self-edit workflow
 
@@ -31,7 +31,14 @@ Inspect the implementation and Git status, make the narrowest change, run the
 narrowest relevant tests, then run `npm run check` and broader tests when the
 impact warrants it. Compare results with the recorded baseline, inspect the
 diff, and commit separately with an `evolve:` prefix. Never mix `/workspace`
-and `/pi` changes in one commit.
+and `/pi` changes in one commit. Reusable capability commits in `/agent` use a
+`capability:` prefix and remain separate from core `evolve:` commits.
+
+Capability source is activated by installing it into `.pi-agent`, then using
+Pi's `/reload` command. Normal startup installs only clean committed `/agent`
+state. A deliberate candidate can be tested with
+`./scripts/agent.sh install --working-tree`; commit it only after verification.
+The installer never fetches, pulls, or silently overwrites runtime drift.
 
 Code already loaded in a process does not change retroactively:
 

@@ -22,7 +22,8 @@ Prefer the smallest layer that solves the recurring limitation:
 
 1. Solve the current project directly.
 2. Improve a project-local workflow or helper.
-3. Create reusable instructions, a skill, extension, or tool.
+3. Create reusable instructions, a skill, extension, or tool in `/agent` when
+   that repository is mounted.
 4. Improve Pi's harness or general workflow.
 5. Modify Pi core source when the limitation actually belongs there.
 6. Propose an environment/Docker change when a missing system capability is
@@ -60,8 +61,22 @@ When changing `/pi`:
 
 Example: `evolve: improve large-file structural inspection`
 
-Do not mix project changes under `/workspace` with Pi self-changes under `/pi`
-in the same Git commit.
+Do not mix project changes under `/workspace`, reusable capabilities under
+`/agent`, and Pi self-changes under `/pi` in the same Git commit. Use
+`capability:` for `/agent` commits and `evolve:` for `/pi` commits.
+
+## Agent capability evolution
+
+When `/agent/agent.json` exists, `/agent` is the canonical Git history for
+reusable extensions, skills, and prompts. `/home/pi/.pi-agent` contains their
+installed runtime copies plus sessions and private state; do not treat those
+copies as canonical or initialize Git there.
+
+Develop a capability in `/agent`, test the deliberate working-tree candidate
+with `pi-agent-evolution install --working-tree`, then run `/reload`. After
+verification, commit the focused change with a `capability:` prefix. Normal
+startup installs only clean committed capability state. Never fetch, pull, or
+push automatically.
 
 ## Current process versus next generation
 
