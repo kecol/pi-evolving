@@ -5,18 +5,46 @@ SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=common.sh
 source "$SCRIPT_DIR/common.sh"
 
-phase "1/8" "Checking Docker"
+selected_model=""
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --model)
+      shift
+      [[ $# -gt 0 ]] || die "--model requires a value."
+      selected_model="$1"
+      ;;
+    -h|--help)
+      printf 'Usage: ./setup.sh [--model qwen3.8-27b]\n'
+      exit 0
+      ;;
+    *)
+      die "Usage: ./setup.sh [--model qwen3.8-27b]"
+      ;;
+  esac
+  shift
+done
+[[ -z "$selected_model" || "$selected_model" == qwen3.8-27b ]] || \
+  die "Unknown model profile '$selected_model'. Expected qwen3.8-27b."
+
+phase "1/10" "Checking Docker"
 require_docker
+
+phase "2/10" "Checking requested model"
+if [[ "$selected_model" == qwen3.8-27b ]]; then
+  "$REPO_ROOT/scripts/models/qwen3.8-27b/check.sh"
+else
+  printf 'No explicit model profile requested; continuing with Pi model selection.\n'
+fi
 
 if [[ ! -f "$ENV_FILE" ]]; then
   cp "$REPO_ROOT/.env.example" "$ENV_FILE"
   printf 'Created %s from .env.example\n' "$ENV_FILE"
 fi
 
-phase "2/8" "Building Generation 0 substrate"
+phase "3/10" "Building Generation 0 substrate"
 docker compose --project-directory "$REPO_ROOT" --file "$REPO_ROOT/compose.yaml" build pi
 
-phase "3/8" "Creating persistent volumes"
+phase "4/10" "Creating persistent volumes"
 for volume in "$SOURCE_VOLUME" "$AGENT_VOLUME" "$EVOLUTION_VOLUME"; do
   docker volume inspect "$volume" >/dev/null 2>&1 || docker volume create "$volume" >/dev/null
 done
@@ -26,7 +54,7 @@ docker run --rm --user root --entrypoint bash \
   "${BASE_MOUNT_ARGS[@]}" "$PI_IMAGE" -lc \
   'mkdir -p /pi /home/pi/.pi-agent/bin /evolution/generations /evolution/observations /evolution/evaluations && chown -R pi:pi /pi /home/pi/.pi-agent /evolution'
 
-phase "4/8" "Initializing persistent Pi source"
+phase "5/10" "Initializing persistent Pi source"
 docker run --rm --entrypoint bash \
   "${BASE_MOUNT_ARGS[@]}" \
   --env "PI_GIT_NAME=$PI_GIT_NAME" \
@@ -34,21 +62,28 @@ docker run --rm --entrypoint bash \
   --volume "$REPO_ROOT/scripts/container:/opt/pi-evolving:ro" \
   "$PI_IMAGE" /opt/pi-evolving/init-source.sh
 
-phase "5/8" "Installing Pi dependencies"
+phase "6/10" "Installing Pi dependencies"
 maintenance_run 'cd /pi && npm install --ignore-scripts'
 
-phase "6/8" "Building Pi"
+phase "7/10" "Building Pi"
 maintenance_run 'cd /pi && npm run build'
 
-phase "7/8" "Running Pi checks"
+phase "8/10" "Running Pi checks"
 maintenance_run 'cd /pi && npm run check'
 
-phase "8/8" "Installing evolution policy and recording Generation 0"
+phase "9/10" "Installing evolution policy and recording Generation 0"
 docker run --rm --entrypoint bash \
   "${BASE_MOUNT_ARGS[@]}" \
   --volume "$REPO_ROOT/scripts/container:/opt/pi-evolving:ro" \
   --volume "$REPO_ROOT/config/AGENTS.md:/tmp/pi-evolving-AGENTS.md:ro" \
   --env "PI_HOST_PLATFORM=$(uname -s)" \
   "$PI_IMAGE" /opt/pi-evolving/install-policy.sh
+
+phase "10/10" "Configuring requested model"
+if [[ "$selected_model" == qwen3.8-27b ]]; then
+  "$REPO_ROOT/scripts/local-model.sh" --profile qwen3.8-27b --smoke-test
+else
+  printf 'No explicit model profile requested.\n'
+fi
 
 printf '\nSetup complete.\n  Run Pi:  ./pi.sh /path/to/project\n  Shell:   ./shell.sh\n  Tests:   ./test.sh\n'

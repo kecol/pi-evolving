@@ -50,27 +50,32 @@ That produces the path used in the example above:
 ## 1. Load the model profile
 
 The repository includes
-[`config/qwen3.8-27b.env.example`](../config/qwen3.8-27b.env.example). Copy it
-to the user configuration directory so local changes do not dirty the Git
-working tree:
+[`models/qwen3.8-27b/model.env.example`](../models/qwen3.8-27b/model.env.example).
+The model scripts copy it to the user configuration directory automatically so
+local changes do not dirty the Git working tree. To create the profile before
+downloading, run:
 
 ```bash
-MODEL_CONFIG_HOME="${XDG_CONFIG_HOME:-$HOME/.config}/pi-evolving/models"
-mkdir -p "$MODEL_CONFIG_HOME"
-cp config/qwen3.8-27b.env.example "$MODEL_CONFIG_HOME/qwen3.8-27b.env"
+./scripts/models/qwen3.8-27b/download.sh
 ```
 
-On WSL2 with models stored on drive E, set the override before sourcing the
-profile. On native Linux, omit the first line to use the XDG default:
+The command stops with an installation command if the Hugging Face CLI is
+missing. On WSL2 with models stored on drive E, set the override before the
+first download. On native Linux, omit the first line to use the XDG default:
 
 ```bash
 export LOCAL_MODELS_ROOT=/mnt/e/models
-source "${XDG_CONFIG_HOME:-$HOME/.config}/pi-evolving/models/qwen3.8-27b.env"
+./scripts/models/qwen3.8-27b/download.sh
 ```
+
+Subsequent runs reuse the user profile at
+`~/.config/pi-evolving/models/qwen3.8-27b.env`. Edit that file for persistent
+local changes.
 
 Inspect the resolved paths before downloading roughly 17--19 GB:
 
 ```bash
+source "${XDG_CONFIG_HOME:-$HOME/.config}/pi-evolving/models/qwen3.8-27b.env"
 printf 'Repository: %s\nQuant:      %s\nFile:       %s\n' \
   "$HF_MODEL_REPO" "$MODEL_QUANT" "$MODEL_FILE"
 ```
@@ -88,26 +93,22 @@ Install the Hugging Face CLI in the active Python environment:
 python -m pip install -U "huggingface_hub[cli]"
 ```
 
-Create the repository-shaped model directory and download only the selected
-quantization:
+The dedicated download command creates the repository-shaped model directory
+and downloads only the selected quantization:
 
 ```bash
-mkdir -p "$MODEL_DIR"
-
-hf download "$HF_MODEL_REPO" \
-  --local-dir "$MODEL_DIR" \
-  --include "*$MODEL_QUANT*"
-
-test -f "$MODEL_FILE"
+./scripts/models/qwen3.8-27b/download.sh
 ```
 
 Keeping the Hugging Face organization and repository in the local path avoids
 filename collisions and makes provenance obvious. Re-running `hf download` is
 safe and resumes or reuses already downloaded content.
 
-For tighter cards, change both `MODEL_QUANT` and `MODEL_FILE` in the copied
-profile to `UD-Q3_K_XL` before downloading. Unsloth estimates 13--16 GB total
-memory for the 3-bit option, at some quality cost.
+This first-run profile intentionally requires `UD-Q4_K_XL`; it will reject a
+different value to prevent an accidental mismatch between the documented and
+deployed model. Unsloth also publishes smaller quantizations, but those should
+be added as separate, explicitly tested profiles rather than silently replacing
+this one.
 
 ## 3. Start llama-server
 
@@ -126,12 +127,12 @@ Start the server with the model and server settings supplied through the
 environment:
 
 ```bash
-llama-server \
-  --temp "$LOCAL_MODEL_TEMPERATURE" \
-  --top-p "$LOCAL_MODEL_TOP_P" \
-  --top-k "$LOCAL_MODEL_TOP_K" \
-  --min-p "$LOCAL_MODEL_MIN_P"
+./scripts/models/qwen3.8-27b/serve.sh
 ```
+
+The script runs llama-server in the foreground. Keep that shell open while Pi
+is using the model. The complete environment and sampling configuration remains
+visible in the tracked profile and can be audited without running the script.
 
 The chosen defaults are:
 
@@ -150,6 +151,7 @@ Command-line arguments override `LLAMA_ARG_*` variables, so temporary tests do
 not require editing the profile. For example:
 
 ```bash
+source "${XDG_CONFIG_HOME:-$HOME/.config}/pi-evolving/models/qwen3.8-27b.env"
 llama-server --ctx-size 32768 \
   --temp "$LOCAL_MODEL_TEMPERATURE" \
   --top-p "$LOCAL_MODEL_TOP_P" \
@@ -165,28 +167,37 @@ other users.
 
 ## 4. Verify and connect Pi
 
-In a second shell, load the same profile and query the server:
+In a second shell, verify the model alias and optionally run a direct completion:
 
 ```bash
-source "${XDG_CONFIG_HOME:-$HOME/.config}/pi-evolving/models/qwen3.8-27b.env"
-
-curl --fail \
-  -H "Authorization: Bearer $LLAMA_API_KEY" \
-  "http://localhost:$LLAMA_ARG_PORT/v1/models"
+./scripts/models/qwen3.8-27b/check.sh
+./scripts/models/qwen3.8-27b/check.sh --smoke-test
 ```
 
-Then, from the Pi Evolving repository:
+For a first-time setup, select the profile explicitly. Setup performs an early
+host-side check before the build, installs the Qwen-specific `models.json`, and
+performs another completion smoke test through the same Docker route Pi uses:
 
 ```bash
-./scripts/local-model.sh
+./setup.sh --model qwen3.8-27b
 ./pi.sh /path/to/workspace
 ```
 
 From PowerShell when Pi Evolving runs through Docker Desktop:
 
 ```powershell
-.\scripts\local-model.ps1
+.\setup.ps1 -Model qwen3.8-27b
 .\pi.ps1 C:\path\to\workspace
+```
+
+If Pi is already initialized, enable the profile without rebuilding:
+
+```bash
+./scripts/local-model.sh --profile qwen3.8-27b --smoke-test
+```
+
+```powershell
+.\scripts\local-model.ps1 -Profile qwen3.8-27b -SmokeTest
 ```
 
 The preset advertises a 65,536-token window to Pi while llama-server allocates
@@ -237,7 +248,7 @@ make one change at a time in this order:
    slower inference.
 
 After reducing the server below 65,536 tokens, also lower `contextWindow` in
-`config/models.llamacpp-wsl.json` and reinstall the Pi preset. Never advertise
+`models/qwen3.8-27b/models.json` and reinstall the Pi profile. Never advertise
 more context to Pi than llama-server can accept.
 
 The RTX 5090 can also use Blackwell-specific NVFP4 deployments. Unsloth reports

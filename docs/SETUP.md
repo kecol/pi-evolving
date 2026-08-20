@@ -111,6 +111,32 @@ Install and select the preset without manually writing JSON:
 .\scripts\local-model.ps1
 ```
 
+### First setup with Qwen3.8-27B
+
+The explicit Qwen profile uses Unsloth's quantized `UD-Q4_K_XL` GGUF. Download
+and start it from WSL2 or Linux first:
+
+```bash
+./scripts/models/qwen3.8-27b/download.sh
+./scripts/models/qwen3.8-27b/serve.sh
+```
+
+In another shell, select it during setup:
+
+```bash
+./setup.sh --model qwen3.8-27b
+```
+
+```powershell
+.\setup.ps1 -Model qwen3.8-27b
+```
+
+An explicit model selection is strict: setup stops before the build if the
+endpoint or `local-coder` alias is unavailable. After initialization it checks
+the endpoint again from Docker, runs a short completion, installs
+`models/qwen3.8-27b/models.json`, and selects the provider in `.env`. Plain
+setup remains model-neutral.
+
 The installer validates the endpoint, saves a timestamped backup when replacing
 `/home/pi/.pi-agent/models.json`, writes the preset with mode `0600`, and updates
 `PI_PROVIDER` and `PI_MODEL` in `.env`. It never alters the workspace. To stage

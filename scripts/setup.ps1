@@ -1,19 +1,39 @@
+param(
+    [ValidateSet("qwen3.8-27b")][string]$Model
+)
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 . (Join-Path $PSScriptRoot "common.ps1")
 
-Write-Phase "1/8" "Checking Docker"
+Write-Phase "1/10" "Checking Docker"
 Assert-Docker
+
+Write-Phase "2/10" "Checking requested model"
+if ($Model -eq "qwen3.8-27b") {
+    $headers = @{ Authorization = "Bearer local-dev-key" }
+    try {
+        $models = Invoke-RestMethod -Method Get -Uri "http://localhost:8080/v1/models" -Headers $headers -TimeoutSec 10
+    } catch {
+        throw "Qwen3.8 llama-server is unavailable at http://localhost:8080/v1. Start scripts/models/qwen3.8-27b/serve.sh in WSL2, then retry. $($_.Exception.Message)"
+    }
+    $modelIds = @($models.data | ForEach-Object { $_.id })
+    if ($modelIds -notcontains "local-coder") {
+        throw "The llama.cpp endpoint responded, but model alias 'local-coder' was not listed."
+    }
+    Write-Host "Found model alias: local-coder"
+} else {
+    Write-Host "No explicit model profile requested; continuing with Pi model selection."
+}
 
 if (-not (Test-Path -LiteralPath $Script:EnvFile)) {
     Copy-Item (Join-Path $Script:RepoRoot ".env.example") $Script:EnvFile
     Write-Host "Created $Script:EnvFile from .env.example"
 }
 
-Write-Phase "2/8" "Building Generation 0 substrate"
+Write-Phase "3/10" "Building Generation 0 substrate"
 Invoke-Docker @("compose", "--project-directory", $Script:RepoRoot, "--file", (Join-Path $Script:RepoRoot "compose.yaml"), "build", "pi")
 
-Write-Phase "3/8" "Creating persistent volumes"
+Write-Phase "4/10" "Creating persistent volumes"
 foreach ($volume in @($Script:SourceVolume, $Script:AgentVolume, $Script:EvolutionVolume)) {
     if (-not (Test-DockerVolume $volume)) { Invoke-Docker @("volume", "create", $volume) }
 }
@@ -25,7 +45,7 @@ $dockerArguments = @("run", "--rm", "--user", "root", "--entrypoint", "bash") + 
 )
 Invoke-Docker $dockerArguments
 
-Write-Phase "4/8" "Initializing persistent Pi source"
+Write-Phase "5/10" "Initializing persistent Pi source"
 $containerScripts = Join-Path $Script:RepoRoot "scripts/container"
 $dockerArguments = @("run", "--rm", "--entrypoint", "bash") + $mounts + @(
     "--env", "PI_GIT_NAME=$Script:PiGitName", "--env", "PI_GIT_EMAIL=$Script:PiGitEmail",
@@ -34,14 +54,14 @@ $dockerArguments = @("run", "--rm", "--entrypoint", "bash") + $mounts + @(
 )
 Invoke-Docker $dockerArguments
 
-Write-Phase "5/8" "Installing Pi dependencies"
+Write-Phase "6/10" "Installing Pi dependencies"
 Invoke-Maintenance "cd /pi && npm install --ignore-scripts"
-Write-Phase "6/8" "Building Pi"
+Write-Phase "7/10" "Building Pi"
 Invoke-Maintenance "cd /pi && npm run build"
-Write-Phase "7/8" "Running Pi checks"
+Write-Phase "8/10" "Running Pi checks"
 Invoke-Maintenance "cd /pi && npm run check"
 
-Write-Phase "8/8" "Installing evolution policy and recording Generation 0"
+Write-Phase "9/10" "Installing evolution policy and recording Generation 0"
 $policyPath = (Join-Path $Script:RepoRoot "config/AGENTS.md")
 $hostPlatform = [System.Environment]::OSVersion.Platform.ToString()
 $dockerArguments = @("run", "--rm", "--entrypoint", "bash") + $mounts + @(
@@ -51,5 +71,12 @@ $dockerArguments = @("run", "--rm", "--entrypoint", "bash") + $mounts + @(
     $Script:PiImage, "/opt/pi-evolving/install-policy.sh"
 )
 Invoke-Docker $dockerArguments
+
+Write-Phase "10/10" "Configuring requested model"
+if ($Model -eq "qwen3.8-27b") {
+    & (Join-Path $PSScriptRoot "local-model.ps1") -Profile "qwen3.8-27b" -SmokeTest
+} else {
+    Write-Host "No explicit model profile requested."
+}
 
 Write-Host "`nSetup complete.`n  Run Pi:  .\pi.ps1 C:\path\to\project`n  Shell:   .\shell.ps1`n  Tests:   .\test.ps1"

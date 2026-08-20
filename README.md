@@ -33,6 +33,33 @@ cd pi-evolving
 ./pi.sh ~/work/my-project
 ```
 
+### First run with quantized Qwen3.8-27B
+
+For the repository's recommended single-GPU profile, first download and start
+the Unsloth `UD-Q4_K_XL` GGUF from WSL2 or Linux:
+
+```bash
+./scripts/models/qwen3.8-27b/download.sh
+./scripts/models/qwen3.8-27b/serve.sh
+```
+
+Keep the server running, then initialize Pi in another shell. Selecting the
+profile makes setup verify the server before building, install the matching Pi
+configuration, and run a completion smoke test:
+
+```bash
+./setup.sh --model qwen3.8-27b
+./pi.sh ~/work/my-project
+```
+
+```powershell
+.\setup.ps1 -Model qwen3.8-27b
+.\pi.ps1 C:\work\my-project
+```
+
+The download is explicit because it transfers roughly 17--19 GB. See the
+[Qwen3.8-27B deployment guide](docs/QWEN38_27B.md) before the first download.
+
 Setup creates `.env` from `.env.example`. Provider and model are blank by
 default so Pi can use its normal selection flow. To configure them explicitly,
 first inspect the choices with `./pi.sh PATH --list-models` (or the PowerShell
@@ -66,6 +93,7 @@ the global evolution policy installed in Pi's runtime state.
 | Inspect upstream | `./scripts/update.sh` | `.\scripts\update.ps1` |
 | Explicit rebase | `./scripts/update.sh --rebase` | `.\scripts\update.ps1 -Rebase` |
 | Enable WSL2 llama.cpp | `./scripts/local-model.sh` | `.\scripts\local-model.ps1` |
+| Check Qwen3.8 server | `./scripts/models/qwen3.8-27b/check.sh` | Run the Bash command in WSL2 |
 
 Reset operations are explicit and confirmed; see [setup and operations](docs/SETUP.md).
 
