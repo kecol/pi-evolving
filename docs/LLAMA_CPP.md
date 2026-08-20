@@ -75,7 +75,7 @@ git clone https://github.com/ggml-org/llama.cpp
 cd llama.cpp
 
 cmake -B build -DGGML_CUDA=ON -DCMAKE_BUILD_TYPE=Release
-cmake --build build --config Release --target llama-server -j "$(nproc)"
+cmake --build build --config Release -j "$(nproc)"
 ```
 
 The server binary is:
@@ -90,6 +90,46 @@ Check the build and detected devices:
 ./build/bin/llama-server --version
 ./build/bin/llama-server --list-devices
 ```
+
+### Make the commands available on `PATH`
+
+For a source checkout that you expect to rebuild, create user-local symlinks:
+
+```bash
+mkdir -p ~/.local/bin
+
+ln -sfn \
+  "$HOME/gits/llama.cpp/build/bin/llama-server" \
+  "$HOME/.local/bin/llama-server"
+
+ln -sfn \
+  "$HOME/gits/llama.cpp/build/bin/llama-cli" \
+  "$HOME/.local/bin/llama-cli"
+```
+
+Do not copy only the executables. Linux builds use shared llama.cpp and GGML
+libraries by default; keeping the commands linked to `build/bin` preserves the
+working build layout and avoids stale copies. Rebuilding the same checkout also
+updates the commands immediately without another installation step.
+
+Ubuntu normally adds `~/.local/bin` to `PATH` when the directory exists at
+login. For the current shell, or if the directory is not already present, run:
+
+```bash
+export PATH="$HOME/.local/bin:$PATH"
+```
+
+Add that line to `~/.profile` if your login environment does not configure it.
+Verify the result:
+
+```bash
+command -v llama-server
+llama-server --version
+llama-cli --version
+```
+
+The expected command location is `~/.local/bin/llama-server`. The symlinks
+remain valid as long as the source checkout stays at `~/gits/llama.cpp`.
 
 If the build cannot detect the GPU architecture, consult the upstream CUDA
 guide for `GGML_NATIVE=OFF` or `CMAKE_CUDA_ARCHITECTURES`. The normal native
@@ -267,7 +307,7 @@ cd ~/gits/llama.cpp
 git status
 git pull --ff-only
 cmake -B build -DGGML_CUDA=ON -DCMAKE_BUILD_TYPE=Release
-cmake --build build --config Release --target llama-server -j "$(nproc)"
+cmake --build build --config Release -j "$(nproc)"
 ```
 
 Restart the server and repeat the health and model-list checks.
