@@ -88,17 +88,17 @@ temporary container with all persistent volumes. `test` checks for fd, runs
 .\scripts\update.ps1 -Rebase
 ```
 
-## Local llama.cpp under WSL2
+## Generic local llama.cpp preset
 
 The tracked `config/models.llamacpp-wsl.json` preset points to
-`http://host.docker.internal:8080/v1`. Run llama.cpp in WSL2 with a listener
-reachable through Docker Desktop:
+`http://host.docker.internal:18080/v1`. Run llama.cpp on the Linux or WSL2 host
+with a listener reachable through Docker:
 
 For CUDA installation, building, model selection, memory sizing, and detailed
 troubleshooting, read [Building llama.cpp for local models](LLAMA_CPP.md).
 
 ```bash
-llama-server --model /path/to/model.gguf --host 0.0.0.0 --port 8080
+llama-server --model /path/to/model.gguf --host 0.0.0.0 --port 18080
 ```
 
 Install and select the preset without manually writing JSON:
@@ -114,8 +114,8 @@ Install and select the preset without manually writing JSON:
 ### First setup with Qwen3.8-27B
 
 The explicit Qwen profile uses Unsloth's quantized `UD-Q4_K_XL` GGUF. Download
-and start it from WSL2 or Linux first. Its dedicated default port is `18080`,
-avoiding the commonly occupied port 8080 used by the generic preset:
+and start it from WSL2 or Linux first. All bundled profiles use port `18080`,
+avoiding the commonly occupied port 8080:
 
 ```bash
 ./scripts/models/qwen3.8-27b/download.sh
@@ -143,6 +143,11 @@ The installer validates the endpoint, saves a timestamped backup when replacing
 `PI_PROVIDER` and `PI_MODEL` in `.env`. It never alters the workspace. To stage
 the configuration while llama.cpp is stopped, use `--skip-check` in Bash or
 `-SkipCheck` in PowerShell.
+
+Bundled presets created before the port migration may still point to 8080.
+Restart llama-server on 18080 and rerun the appropriate local-model installer
+to refresh Pi's persistent endpoint. The Qwen environment-profile migration is
+documented in [its deployment guide](QWEN38_27B.md).
 
 ## Backups
 

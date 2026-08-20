@@ -1,12 +1,13 @@
 # Building llama.cpp for local models
 
-This guide builds a CUDA-enabled `llama-server` inside Ubuntu on WSL2 and
-connects it to Pi Evolving through Docker Desktop.
+This guide builds a CUDA-enabled `llama-server` on native Linux or inside
+Ubuntu on WSL2 and connects it to Pi Evolving through Docker.
 
 Primary references:
 
 - [llama.cpp CUDA build instructions](https://github.com/ggml-org/llama.cpp/blob/master/docs/build.md#cuda)
 - [llama-server documentation](https://github.com/ggml-org/llama.cpp/blob/master/tools/server/README.md)
+- [NVIDIA CUDA installation guide for Linux](https://docs.nvidia.com/cuda/cuda-installation-guide-linux/)
 - [NVIDIA CUDA on WSL guide](https://docs.nvidia.com/cuda/wsl-user-guide/)
 
 For a tested single-GPU model profile, continue with
@@ -16,15 +17,32 @@ For a tested single-GPU model profile, continue with
 
 ```text
 Pi container
-    -> http://host.docker.internal:8080/v1
-    -> Windows and WSL2 networking
-    -> llama-server in WSL2
+    -> http://host.docker.internal:18080/v1
+    -> Docker host-gateway networking
+    -> llama-server on native Linux or in WSL2
     -> local GGUF model on the NVIDIA GPU
 ```
 
-The commands in this guide run in the WSL2 shell unless marked as PowerShell.
+The shell commands run on native Linux or inside WSL2 unless marked as
+PowerShell.
 
-## 1. Prepare WSL2 and CUDA
+## 1. Prepare Linux or WSL2 and CUDA
+
+### Native Linux
+
+Install a compatible NVIDIA Linux driver and CUDA Toolkit by following the
+official [CUDA installation guide for Linux](https://docs.nvidia.com/cuda/cuda-installation-guide-linux/).
+Distribution and driver requirements change over time, so prefer NVIDIA's
+current repository instructions over copied package commands.
+
+Verify the driver and compiler:
+
+```bash
+nvidia-smi
+nvcc --version
+```
+
+### WSL2
 
 Install a current NVIDIA Windows driver with WSL2 CUDA support. The Windows
 driver provides the CUDA driver to WSL2; do **not** install a Linux NVIDIA
@@ -40,13 +58,6 @@ Inside WSL2, verify that the GPU is visible:
 
 ```bash
 nvidia-smi
-```
-
-Install the basic build tools:
-
-```bash
-sudo apt update
-sudo apt install -y build-essential cmake git curl
 ```
 
 A CUDA build also needs the CUDA Toolkit and `nvcc` inside WSL2:
@@ -66,6 +77,15 @@ After installing the toolkit, verify both components:
 ```bash
 nvidia-smi
 nvcc --version
+```
+
+### Build tools on Ubuntu
+
+On native Ubuntu or Ubuntu under WSL2, install the common build tools:
+
+```bash
+sudo apt update
+sudo apt install -y build-essential cmake git curl
 ```
 
 ## 2. Clone and build llama.cpp
@@ -167,7 +187,7 @@ cd ~/gits/llama.cpp
   --model ~/models/your-model.gguf \
   --alias local-coder \
   --host 0.0.0.0 \
-  --port 8080 \
+  --port 18080 \
   --api-key local-dev-key \
   --ctx-size 65536 \
   --n-gpu-layers all
@@ -180,7 +200,7 @@ Or let llama.cpp download a model from Hugging Face:
   --hf-repo organization/model-GGUF:Q4_K_M \
   --alias local-coder \
   --host 0.0.0.0 \
-  --port 8080 \
+  --port 18080 \
   --api-key local-dev-key \
   --ctx-size 65536 \
   --n-gpu-layers all
@@ -192,10 +212,15 @@ These values intentionally match
 | Server option | Pi preset value |
 |---|---|
 | Model alias | `local-coder` |
-| API base URL | `http://host.docker.internal:8080/v1` |
+| API base URL | `http://host.docker.internal:18080/v1` |
 | API key | `local-dev-key` |
 | Context window | `65536` |
 | API type | `openai-completions` |
+
+The bundled preset formerly used port 8080. After moving an existing generic
+server to 18080, rerun `./scripts/local-model.sh` or
+`.\scripts\local-model.ps1` so the persistent Pi configuration receives the
+new endpoint.
 
 `--n-gpu-layers all` requests full GPU offload. Current llama.cpp defaults to
 automatic GPU-layer selection, but making the intent explicit is useful when
@@ -203,10 +228,10 @@ validating a CUDA setup.
 
 ### Security note
 
-Listening on `0.0.0.0` makes WSL2-to-Docker connectivity reliable but can also
+Listening on `0.0.0.0` makes host-to-Docker connectivity reliable but can also
 make the port reachable through other host interfaces. `local-dev-key` is a
-public placeholder, not a secure secret. Do not expose port 8080 to an
-untrusted network. Use Windows Firewall, avoid router port forwarding, and use
+public placeholder, not a secure secret. Do not expose port 18080 to an
+untrusted network. Use the host firewall, avoid router port forwarding, and use
 a private key in both the server command and Pi's persistent `models.json` if
 other machines can reach the port.
 
@@ -215,22 +240,22 @@ Pi needs only the model API.
 
 ## 5. Verify the server
 
-Wait until the server reports that the model is loaded. In another WSL2 shell:
+Wait until the server reports that the model is loaded. In another shell:
 
 ```bash
 curl --fail \
   -H 'Authorization: Bearer local-dev-key' \
-  http://localhost:8080/v1/health
+  http://localhost:18080/v1/health
 
 curl --fail \
   -H 'Authorization: Bearer local-dev-key' \
-  http://localhost:8080/v1/models
+  http://localhost:18080/v1/models
 ```
 
 Test a completion directly:
 
 ```bash
-curl --fail http://localhost:8080/v1/chat/completions \
+curl --fail http://localhost:18080/v1/chat/completions \
   -H 'Authorization: Bearer local-dev-key' \
   -H 'Content-Type: application/json' \
   -d '{
@@ -245,7 +270,7 @@ From Windows PowerShell, verify WSL2 localhost forwarding:
 ```powershell
 curl.exe `
   -H "Authorization: Bearer local-dev-key" `
-  http://localhost:8080/v1/models
+  http://localhost:18080/v1/models
 ```
 
 Then verify the route used by the Pi container:
@@ -259,7 +284,7 @@ Inside the container:
 ```bash
 curl --fail \
   -H 'Authorization: Bearer local-dev-key' \
-  http://host.docker.internal:8080/v1/models | jq .
+  http://host.docker.internal:18080/v1/models | jq .
 exit
 ```
 
@@ -319,9 +344,10 @@ Restart the server and repeat the health and model-list checks.
 
 ### `nvcc: command not found`
 
-Install the CUDA Toolkit for WSL-Ubuntu. If it is installed outside the normal
-path, ensure its `bin` directory is on `PATH`. Do not install a Linux NVIDIA
-display driver inside WSL2.
+Install the CUDA Toolkit for your platform. If it is installed outside the
+normal path, ensure its `bin` directory is on `PATH`. On WSL2, do not install a
+Linux NVIDIA display driver; on native Linux, follow NVIDIA's Linux driver and
+toolkit instructions.
 
 ### CMake cannot find CUDA
 
@@ -332,7 +358,7 @@ the upstream build guide documents `CMAKE_CUDA_COMPILER`.
 ### The GPU is detected but VRAM usage stays low
 
 Start with `--n-gpu-layers all`, inspect the llama-server startup log, and watch
-the GPU from another WSL2 terminal:
+the GPU from another shell:
 
 ```bash
 watch -n 1 nvidia-smi
@@ -344,11 +370,11 @@ Reduce context size, choose a smaller model or quantization, or allow fewer GPU
 layers. Unified-memory fallback exists but is slower and is not the preferred
 first fix.
 
-### Windows can reach the server but Docker cannot
+### The host can reach the server but Docker cannot
 
-Confirm that the server uses `--host 0.0.0.0`, then check Windows Firewall and
-Docker Desktop networking. The preferred container URL is
-`http://host.docker.internal:8080/v1`; using WSL2's changing IP address should
+Confirm that the server uses `--host 0.0.0.0`, then check the host firewall and
+Docker networking. The preferred container URL is
+`http://host.docker.internal:18080/v1`; using WSL2's changing IP address should
 be a last resort.
 
 ### HTTP 401
