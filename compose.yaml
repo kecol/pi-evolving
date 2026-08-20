@@ -13,6 +13,8 @@ services:
       PI_SKIP_VERSION_CHECK: "1"
       PI_PROVIDER: "${PI_PROVIDER:-}"
       PI_MODEL: "${PI_MODEL:-}"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     volumes:
       - pi-source:/pi
       - pi-agent-state:/home/pi/.pi-agent

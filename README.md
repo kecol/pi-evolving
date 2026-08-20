@@ -105,4 +105,5 @@ to a remote or mounts the host Docker socket.
 - [Evolution model](docs/EVOLUTION.md)
 - [Generation 0 reference](docs/GENERATION_0.md)
 - [Build and run llama.cpp under WSL2](docs/LLAMA_CPP.md)
+- [Deploy Qwen3.8-27B on a 24 GB or larger NVIDIA GPU](docs/QWEN38_27B.md)
 - [Troubleshooting](docs/TROUBLESHOOTING.md)

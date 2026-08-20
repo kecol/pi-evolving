@@ -79,6 +79,7 @@ function Assert-Initialized {
 
 function Get-BaseMountArguments {
     return @(
+        "--add-host", "host.docker.internal:host-gateway",
         "--volume", "${Script:SourceVolume}:/pi",
         "--volume", "${Script:AgentVolume}:/home/pi/.pi-agent",
         "--volume", "${Script:EvolutionVolume}:/evolution"

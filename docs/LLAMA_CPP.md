@@ -9,6 +9,9 @@ Primary references:
 - [llama-server documentation](https://github.com/ggml-org/llama.cpp/blob/master/tools/server/README.md)
 - [NVIDIA CUDA on WSL guide](https://docs.nvidia.com/cuda/wsl-user-guide/)
 
+For a tested single-GPU model profile, continue with
+[Deploying Qwen3.8-27B with llama.cpp](QWEN38_27B.md) after building the tools.
+
 ## Architecture
 
 ```text

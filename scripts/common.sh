@@ -59,6 +59,7 @@ require_initialized() {
 
 base_mount_args() {
   BASE_MOUNT_ARGS=(
+    --add-host "host.docker.internal:host-gateway"
     --volume "$SOURCE_VOLUME:/pi"
     --volume "$AGENT_VOLUME:/home/pi/.pi-agent"
     --volume "$EVOLUTION_VOLUME:/evolution"
