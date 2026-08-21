@@ -29,7 +29,20 @@ PI_HOST_PORT="${PI_HOST_PORT:-9191}"
 PI_CONTAINER_PORT="${PI_CONTAINER_PORT:-9191}"
 PI_GIT_NAME="${PI_GIT_NAME:-Pi Evolving Agent}"
 PI_GIT_EMAIL="${PI_GIT_EMAIL:-pi-evolving@local}"
-PI_AGENT_EVOLUTION_PATH="${PI_AGENT_EVOLUTION_PATH:-}"
+if [[ -v PI_AGENT_EVOLUTION_PATH ]]; then
+  PI_AGENT_EVOLUTION_PATH_RAW="$PI_AGENT_EVOLUTION_PATH"
+else
+  PI_AGENT_EVOLUTION_PATH_RAW="../pi-agent-evolution"
+fi
+if [[ -n "$PI_AGENT_EVOLUTION_PATH_RAW" ]]; then
+  if [[ "$PI_AGENT_EVOLUTION_PATH_RAW" == /* ]]; then
+    PI_AGENT_EVOLUTION_PATH="$(realpath -m "$PI_AGENT_EVOLUTION_PATH_RAW")"
+  else
+    PI_AGENT_EVOLUTION_PATH="$(realpath -m "$REPO_ROOT/$PI_AGENT_EVOLUTION_PATH_RAW")"
+  fi
+else
+  PI_AGENT_EVOLUTION_PATH=""
+fi
 PI_AGENT_AUTO_INSTALL="${PI_AGENT_AUTO_INSTALL:-1}"
 
 SOURCE_VOLUME="pi-evolving-source"
@@ -67,12 +80,60 @@ base_mount_args() {
     --volume "$EVOLUTION_VOLUME:/evolution"
   )
   if [[ -n "$PI_AGENT_EVOLUTION_PATH" ]]; then
-    [[ "$PI_AGENT_EVOLUTION_PATH" == /* ]] || \
-      die "PI_AGENT_EVOLUTION_PATH must be an absolute path."
     [[ -d "$PI_AGENT_EVOLUTION_PATH" ]] || \
-      die "Agent evolution directory does not exist: $PI_AGENT_EVOLUTION_PATH"
-    BASE_MOUNT_ARGS+=(--volume "$(realpath "$PI_AGENT_EVOLUTION_PATH"):/agent")
+      die "Agent evolution directory does not exist: $PI_AGENT_EVOLUTION_PATH (run ./setup.sh)."
+    BASE_MOUNT_ARGS+=(--volume "$PI_AGENT_EVOLUTION_PATH:/agent")
   fi
+}
+
+initialize_agent_evolution() {
+  local path="$PI_AGENT_EVOLUTION_PATH" template_root="$REPO_ROOT/config/agent-repository"
+  local git_root="" repository_initialized=false
+  [[ -n "$path" ]] || {
+    printf 'Agent evolution is disabled by an empty PI_AGENT_EVOLUTION_PATH.\n'
+    return 0
+  }
+  command -v git >/dev/null 2>&1 || die "Git is required to initialize $path."
+
+  if [[ -e "$path" && ! -d "$path" ]]; then
+    die "Agent evolution path exists but is not a directory: $path"
+  fi
+  if [[ -d "$path" ]]; then
+    git_root="$(git -C "$path" rev-parse --show-toplevel 2>/dev/null || true)"
+  fi
+  if [[ -n "$git_root" && "$(realpath -m "$git_root")" == "$path" ]]; then
+    if [[ -f "$path/agent.json" ]]; then
+      printf 'Using existing agent evolution repository: %s\n' "$path"
+      if [[ ! -f "$path/AGENTS.md" ]]; then
+        printf 'Note: add %s/AGENTS.md to give Pi repository-specific capability instructions.\n' "$path"
+      fi
+      return 0
+    fi
+    if [[ -n "$(find "$path" -mindepth 1 -maxdepth 1 ! -name .git -print -quit)" ]]; then
+      die "Existing agent evolution repository is missing agent.json: $path"
+    fi
+    repository_initialized=true
+  fi
+  if [[ "$repository_initialized" == false && -d "$path" && \
+        -n "$(find "$path" -mindepth 1 -maxdepth 1 -print -quit)" ]]; then
+    die "Refusing to initialize non-empty, non-Git directory: $path"
+  fi
+
+  mkdir -p "$path/extensions" "$path/skills" "$path/prompts"
+  cp "$template_root/AGENTS.md" "$path/AGENTS.md"
+  cp "$template_root/README.md" "$path/README.md"
+  cp "$template_root/agent.json" "$path/agent.json"
+  : > "$path/extensions/.gitkeep"
+  : > "$path/skills/.gitkeep"
+  : > "$path/prompts/.gitkeep"
+  if [[ "$repository_initialized" == false ]]; then
+    git -C "$path" init -b main >/dev/null
+  fi
+  git -C "$path" config user.name "$PI_GIT_NAME"
+  git -C "$path" config user.email "$PI_GIT_EMAIL"
+  git -C "$path" add AGENTS.md README.md agent.json extensions/.gitkeep skills/.gitkeep prompts/.gitkeep
+  git -C "$path" commit -m "capability: initialize agent evolution repository" >/dev/null
+  printf 'Created agent evolution repository: %s\n' "$path"
 }
 
 maintenance_run() {

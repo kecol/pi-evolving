@@ -24,9 +24,10 @@ lineage so each has clear persistence and trust boundaries.
   the Pi lineage.
 - `/pi` is a Linux-native named volume containing the canonical upstream clone,
   its `.git` directory, `node_modules`, and build outputs.
-- `/agent` is an optional host Git repository for reusable extensions, skills,
-  and prompts. It is mounted read-write so Pi can develop focused capability
-  commits when the user permits it.
+- `/agent` is a host Git repository for reusable extensions, skills, and
+  prompts. Setup creates it beside the harness by default; an empty configured
+  path disables it. It is mounted read-write so Pi can develop focused
+  capability commits when the user permits it.
 - `/home/pi/.pi-agent` persists settings, sessions, auth metadata, and acquired
   executables. Declared `/agent` files are installed here; this directory is
   runtime state, not another Git repository. Its `bin` directory is first on

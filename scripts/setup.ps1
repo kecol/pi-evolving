@@ -5,10 +5,10 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 . (Join-Path $PSScriptRoot "common.ps1")
 
-Write-Phase "1/11" "Checking Docker"
+Write-Phase "1/12" "Checking Docker"
 Assert-Docker
 
-Write-Phase "2/11" "Checking requested model"
+Write-Phase "2/12" "Checking requested model"
 if ($Model -eq "qwen3.8-27b") {
     $qwenProfilePath = Join-Path $Script:RepoRoot "models/qwen3.8-27b/models.json"
     $qwenProfile = Get-Content -LiteralPath $qwenProfilePath -Raw | ConvertFrom-Json
@@ -35,10 +35,13 @@ if (-not (Test-Path -LiteralPath $Script:EnvFile)) {
     Write-Host "Created $Script:EnvFile from .env.example"
 }
 
-Write-Phase "3/11" "Building Generation 0 substrate"
+Write-Phase "3/12" "Initializing agent evolution repository"
+Initialize-AgentEvolution
+
+Write-Phase "4/12" "Building Generation 0 substrate"
 Invoke-Docker @("compose", "--project-directory", $Script:RepoRoot, "--file", (Join-Path $Script:RepoRoot "compose.yaml"), "build", "pi")
 
-Write-Phase "4/11" "Creating persistent volumes"
+Write-Phase "5/12" "Creating persistent volumes"
 foreach ($volume in @($Script:SourceVolume, $Script:AgentVolume, $Script:EvolutionVolume)) {
     if (-not (Test-DockerVolume $volume)) { Invoke-Docker @("volume", "create", $volume) }
 }
@@ -50,7 +53,7 @@ $dockerArguments = @("run", "--rm", "--user", "root", "--entrypoint", "bash") + 
 )
 Invoke-Docker $dockerArguments
 
-Write-Phase "5/11" "Initializing persistent Pi source"
+Write-Phase "6/12" "Initializing persistent Pi source"
 $containerScripts = Join-Path $Script:RepoRoot "scripts/container"
 $dockerArguments = @("run", "--rm", "--entrypoint", "bash") + $mounts + @(
     "--env", "PI_GIT_NAME=$Script:PiGitName", "--env", "PI_GIT_EMAIL=$Script:PiGitEmail",
@@ -59,14 +62,14 @@ $dockerArguments = @("run", "--rm", "--entrypoint", "bash") + $mounts + @(
 )
 Invoke-Docker $dockerArguments
 
-Write-Phase "6/11" "Installing Pi dependencies"
+Write-Phase "7/12" "Installing Pi dependencies"
 Invoke-Maintenance "cd /pi && npm install --ignore-scripts"
-Write-Phase "7/11" "Building Pi"
+Write-Phase "8/12" "Building Pi"
 Invoke-Maintenance "cd /pi && npm run build"
-Write-Phase "8/11" "Running Pi checks"
+Write-Phase "9/12" "Running Pi checks"
 Invoke-Maintenance "cd /pi && npm run check"
 
-Write-Phase "9/11" "Installing evolution policy and recording Generation 0"
+Write-Phase "10/12" "Installing evolution policy and recording Generation 0"
 $policyPath = (Join-Path $Script:RepoRoot "config/AGENTS.md")
 $hostPlatform = [System.Environment]::OSVersion.Platform.ToString()
 $dockerArguments = @("run", "--rm", "--entrypoint", "bash") + $mounts + @(
@@ -77,14 +80,14 @@ $dockerArguments = @("run", "--rm", "--entrypoint", "bash") + $mounts + @(
 )
 Invoke-Docker $dockerArguments
 
-Write-Phase "10/11" "Installing agent evolution capabilities"
+Write-Phase "11/12" "Installing agent evolution capabilities"
 if ($Script:PiAgentEvolutionPath) {
     Install-AgentEvolutionIfConfigured
 } else {
     Write-Host "No agent evolution repository configured."
 }
 
-Write-Phase "11/11" "Configuring requested model"
+Write-Phase "12/12" "Configuring requested model"
 if ($Model -eq "qwen3.8-27b") {
     & (Join-Path $PSScriptRoot "local-model.ps1") -Profile "qwen3.8-27b" -SmokeTest
 } else {

@@ -29,7 +29,17 @@ $Script:PiHostPort = if ($env:PI_HOST_PORT) { $env:PI_HOST_PORT } else { "9191" 
 $Script:PiContainerPort = if ($env:PI_CONTAINER_PORT) { $env:PI_CONTAINER_PORT } else { "9191" }
 $Script:PiGitName = if ($env:PI_GIT_NAME) { $env:PI_GIT_NAME } else { "Pi Evolving Agent" }
 $Script:PiGitEmail = if ($env:PI_GIT_EMAIL) { $env:PI_GIT_EMAIL } else { "pi-evolving@local" }
-$Script:PiAgentEvolutionPath = if ($env:PI_AGENT_EVOLUTION_PATH) { $env:PI_AGENT_EVOLUTION_PATH } else { "" }
+$agentPathVariable = Get-Item -Path "Env:PI_AGENT_EVOLUTION_PATH" -ErrorAction SilentlyContinue
+$agentPathRaw = if ($null -ne $agentPathVariable) { $agentPathVariable.Value } else { "../pi-agent-evolution" }
+if ($agentPathRaw) {
+    $Script:PiAgentEvolutionPath = if ([System.IO.Path]::IsPathRooted($agentPathRaw)) {
+        [System.IO.Path]::GetFullPath($agentPathRaw)
+    } else {
+        [System.IO.Path]::GetFullPath((Join-Path $Script:RepoRoot $agentPathRaw))
+    }
+} else {
+    $Script:PiAgentEvolutionPath = ""
+}
 $Script:PiAgentAutoInstall = if ($env:PI_AGENT_AUTO_INSTALL) { $env:PI_AGENT_AUTO_INSTALL } else { "1" }
 $Script:SourceVolume = "pi-evolving-source"
 $Script:AgentVolume = "pi-evolving-agent-state"
@@ -87,16 +97,77 @@ function Get-BaseMountArguments {
         "--volume", "${Script:EvolutionVolume}:/evolution"
     )
     if ($Script:PiAgentEvolutionPath) {
-        if (-not [System.IO.Path]::IsPathFullyQualified($Script:PiAgentEvolutionPath)) {
-            throw "PI_AGENT_EVOLUTION_PATH must be an absolute path."
-        }
         if (-not (Test-Path -LiteralPath $Script:PiAgentEvolutionPath -PathType Container)) {
-            throw "Agent evolution directory does not exist: $Script:PiAgentEvolutionPath"
+            throw "Agent evolution directory does not exist: $Script:PiAgentEvolutionPath (run .\setup.ps1)."
         }
         $agentPath = (Resolve-Path -LiteralPath $Script:PiAgentEvolutionPath).Path
         $arguments += @("--volume", "${agentPath}:/agent")
     }
     return $arguments
+}
+
+function Initialize-AgentEvolution {
+    $path = $Script:PiAgentEvolutionPath
+    if (-not $path) {
+        Write-Host "Agent evolution is disabled by an empty PI_AGENT_EVOLUTION_PATH."
+        return
+    }
+    if (-not (Get-Command git -ErrorAction SilentlyContinue)) {
+        throw "Git is required to initialize $path."
+    }
+    if ((Test-Path -LiteralPath $path) -and -not (Test-Path -LiteralPath $path -PathType Container)) {
+        throw "Agent evolution path exists but is not a directory: $path"
+    }
+
+    $isGitRepository = $false
+    $repositoryInitialized = $false
+    if (Test-Path -LiteralPath $path -PathType Container) {
+        $gitRoot = (& git -C $path rev-parse --show-toplevel 2>$null)
+        if ($LASTEXITCODE -eq 0 -and $gitRoot) {
+            $resolvedGitRoot = [System.IO.Path]::GetFullPath([string]$gitRoot).TrimEnd('\', '/')
+            $resolvedPath = [System.IO.Path]::GetFullPath($path).TrimEnd('\', '/')
+            $isGitRepository = $resolvedGitRoot -eq $resolvedPath
+        }
+    }
+    if ($isGitRepository) {
+        if (Test-Path -LiteralPath (Join-Path $path "agent.json") -PathType Leaf) {
+            Write-Host "Using existing agent evolution repository: $path"
+            if (-not (Test-Path -LiteralPath (Join-Path $path "AGENTS.md") -PathType Leaf)) {
+                Write-Host "Note: add $path\AGENTS.md to give Pi repository-specific capability instructions."
+            }
+            return
+        }
+        $nonGitEntries = @(Get-ChildItem -LiteralPath $path -Force | Where-Object { $_.Name -ne ".git" })
+        if ($nonGitEntries.Count -gt 0) {
+            throw "Existing agent evolution repository is missing agent.json: $path"
+        }
+        $repositoryInitialized = $true
+    }
+    if (-not $repositoryInitialized -and (Test-Path -LiteralPath $path -PathType Container) -and
+        @(Get-ChildItem -LiteralPath $path -Force).Count -gt 0) {
+        throw "Refusing to initialize non-empty, non-Git directory: $path"
+    }
+
+    $templateRoot = Join-Path $Script:RepoRoot "config/agent-repository"
+    foreach ($directory in @($path, (Join-Path $path "extensions"), (Join-Path $path "skills"), (Join-Path $path "prompts"))) {
+        New-Item -ItemType Directory -Path $directory -Force | Out-Null
+    }
+    foreach ($file in @("AGENTS.md", "README.md", "agent.json")) {
+        Copy-Item -LiteralPath (Join-Path $templateRoot $file) -Destination (Join-Path $path $file)
+    }
+    foreach ($directory in @("extensions", "skills", "prompts")) {
+        New-Item -ItemType File -Path (Join-Path $path "$directory/.gitkeep") -Force | Out-Null
+    }
+    if (-not $repositoryInitialized) {
+        & git -C $path init -b main *> $null
+        if ($LASTEXITCODE -ne 0) { throw "Could not initialize agent evolution Git repository at $path." }
+    }
+    & git -C $path config user.name $Script:PiGitName
+    & git -C $path config user.email $Script:PiGitEmail
+    & git -C $path add AGENTS.md README.md agent.json extensions/.gitkeep skills/.gitkeep prompts/.gitkeep
+    & git -C $path commit -m "capability: initialize agent evolution repository" *> $null
+    if ($LASTEXITCODE -ne 0) { throw "Could not create the initial agent evolution commit at $path." }
+    Write-Host "Created agent evolution repository: $path"
 }
 
 function Invoke-Maintenance {

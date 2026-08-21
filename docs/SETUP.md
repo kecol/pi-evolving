@@ -7,8 +7,8 @@ Docker operations for inspection and recovery.
 
 On first setup, `.env.example` is copied to `.env`. Provider/model are blank by
 default; run Pi with `--list-models` before setting them explicitly. The file
-also controls ports, image name, the Git identity used only inside `/pi`, and
-an optional agent-capability repository.
+also controls ports, image name, the Git identity used inside `/pi` and for a
+newly bootstrapped agent repository, and the agent-capability repository path.
 Do not put API keys in the harness. Pi's normal authentication state belongs in
 its persistent agent-state volume.
 
@@ -19,11 +19,16 @@ supported. Pi source always stays in a Linux-native named volume.
 Advanced native-Linux builds can set `PI_UID` and `PI_GID` before Compose build;
 v1 defaults to the predictable `1001:1001` volume ownership model.
 
+`PI_AGENT_EVOLUTION_PATH` accepts an absolute path or a path relative to the
+harness root. Its default, `../pi-agent-evolution`, creates a sibling local Git
+repository. Set it to an empty value to disable agent evolution.
+
 ## What setup does
 
-Setup checks Docker, builds `pi-evolving:local`, creates three named volumes,
-fixes ownership, clones upstream if `/pi/.git` is absent, creates `evolve`, and
-sets a local Git identity if missing. It then runs:
+Setup checks Docker, safely initializes or reuses the configured agent
+repository, builds `pi-evolving:local`, creates three named volumes, fixes
+ownership, clones upstream if `/pi/.git` is absent, creates `evolve`, and sets
+a local Git identity if missing. It then runs:
 
 ```bash
 cd /pi
@@ -41,6 +46,12 @@ When `PI_AGENT_EVOLUTION_PATH` is configured, setup and each `pi` launch mount
 that host repository at `/agent` and install its clean committed manifest into
 `.pi-agent`. No remote operation is performed. See [Agent capability
 evolution](AGENT_EVOLUTION.md).
+
+For a missing or empty path, setup creates a `main` Git repository containing
+the governance files, an empty manifest, and capability directories, then makes
+an initial `capability:` commit. It never configures a remote. An existing Git
+repository with `agent.json` is preserved. Setup refuses a non-empty non-Git
+directory or an existing capability repository without a manifest.
 
 ## Equivalent manual Docker operations
 

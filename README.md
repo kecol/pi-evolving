@@ -91,7 +91,7 @@ equivalent), then edit `PI_PROVIDER` and `PI_MODEL`. Extra arguments pass throug
 | Location | Storage | Purpose |
 |---|---|---|
 | `/pi` | `pi-evolving-source` volume | Pi source, Git lineage, dependencies, builds |
-| `/agent` | optional host bind mount | version-controlled reusable extensions, skills, and prompts |
+| `/agent` | sibling host Git repository by default | version-controlled reusable extensions, skills, and prompts |
 | `/home/pi/.pi-agent` | `pi-evolving-agent-state` volume | settings, sessions, auth metadata, acquired tools |
 | `/evolution` | `pi-evolving-evolution-state` volume | generations, observations, evaluations |
 | `/workspace` | host bind mount | the project supplied to `pi.sh`/`pi.ps1` |
@@ -118,19 +118,23 @@ Reset operations are explicit and confirmed; see [setup and operations](docs/SET
 
 ### Version-controlled agent capabilities
 
-Reusable extensions, skills, and prompts can live in a separate Git repository
-mounted at `/agent`; `.pi-agent` remains installed runtime state. Set its
-absolute host path in `.env`:
+Reusable extensions, skills, and prompts live in a separate Git repository
+mounted at `/agent`; `.pi-agent` remains installed runtime state. By default,
+setup creates `../pi-agent-evolution` next to this harness:
 
 ```dotenv
-PI_AGENT_EVOLUTION_PATH=/home/me/gits/pi-agent-evolution
+PI_AGENT_EVOLUTION_PATH=../pi-agent-evolution
 PI_AGENT_AUTO_INSTALL=1
 ```
 
-Copy [`config/agent.example.json`](config/agent.example.json) to that
-repository as `agent.json` and declare the files to install. Setup and every Pi
-launch install its current committed state safely. They never fetch or pull,
-reject a dirty repository, and refuse to overwrite runtime drift. See the
+Setup initializes local Git and seeds `AGENTS.md`, `README.md`, an empty
+`agent.json`, and the capability directories. An existing valid repository is
+reused without modification. Leave `PI_AGENT_EVOLUTION_PATH` empty to disable
+the feature, or set another relative or absolute host path.
+
+Setup and every Pi launch install the repository's current committed state
+safely. They never fetch or pull, reject a dirty repository, and refuse to
+overwrite runtime drift. See the
 [agent evolution guide](docs/AGENT_EVOLUTION.md) for initial migration and
 candidate testing.
 

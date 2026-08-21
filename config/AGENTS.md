@@ -72,11 +72,19 @@ reusable extensions, skills, and prompts. `/home/pi/.pi-agent` contains their
 installed runtime copies plus sessions and private state; do not treat those
 copies as canonical or initialize Git there.
 
+Before modifying `/agent`, read `/agent/AGENTS.md` when it exists and follow its
+repository-specific development, testing, Git, and handoff instructions.
+
 Develop a capability in `/agent`, test the deliberate working-tree candidate
 with `pi-agent-evolution install --working-tree`, then run `/reload`. After
 verification, commit the focused change with a `capability:` prefix. Normal
 startup installs only clean committed capability state. Never fetch, pull, or
 push automatically.
+
+When capability work finishes, tell the user which files changed, what was
+tested, the `/agent` commit hash and working-tree status, which remotes are
+configured, and whether the commit remains unpushed. A local-only repository is
+valid. Push only when the user explicitly requests it.
 
 ## Current process versus next generation
 

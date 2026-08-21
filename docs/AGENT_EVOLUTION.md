@@ -1,32 +1,59 @@
 # Agent capability evolution
 
 Reusable Pi behavior has its own Git history. Keep extensions, skills, and
-prompts in a host repository such as `~/gits/pi-agent-evolution`, mount it at
-`/agent`, and treat `/home/pi/.pi-agent` only as installed runtime state.
+prompts in the sibling `pi-agent-evolution` host repository, mount it at
+`/agent`, and treat `/home/pi/.pi-agent` only as installed runtime state. A
+local repository is complete and supported; adding a remote is optional.
+
+## Default first setup
+
+The default `.env` setting is relative to the harness repository:
+
+```dotenv
+PI_AGENT_EVOLUTION_PATH=../pi-agent-evolution
+PI_AGENT_AUTO_INSTALL=1
+```
+
+On Linux, `~/gits/pi-evolving` therefore creates
+`~/gits/pi-agent-evolution`. On Windows, `E:\codex\pi-evolving` creates
+`E:\codex\pi-agent-evolution`. Absolute paths are also supported; an empty
+value disables the feature.
+
+Setup creates the directory only when it is absent or empty, initializes local
+Git on `main`, seeds `AGENTS.md`, `README.md`, an empty `agent.json`, and the
+three capability directories, then makes the initial commit. It never creates
+a remote. Existing repositories are not overwritten.
 
 ## Adopt the existing goal extension
 
 If the prototype repository is still named `pi-capabilities`, rename it and add
-the manifest:
+the manifest and governance policy:
 
 ```bash
 mv ~/gits/pi-capabilities ~/gits/pi-agent-evolution
 cd ~/gits/pi-agent-evolution
 cp /path/to/pi-evolving/config/agent.example.json agent.json
-git add agent.json
-git commit -m "capability: declare installed extensions"
+cp /path/to/pi-evolving/config/agent-repository/AGENTS.md AGENTS.md
+cp /path/to/pi-evolving/config/agent-repository/README.md README.md
+git add AGENTS.md README.md agent.json
+git commit -m "capability: add repository governance"
 ```
 
 Its minimal structure is:
 
 ```text
 pi-agent-evolution/
+├── AGENTS.md
+├── README.md
 ├── agent.json
-└── extensions/
-    └── goal.ts
+├── extensions/
+│   └── goal.ts
+├── prompts/
+└── skills/
 ```
 
-Configure an absolute host path in the harness `.env`:
+The default relative path already resolves to this location when both
+repositories are under `~/gits`. A custom absolute path also works:
 
 ```dotenv
 PI_AGENT_EVOLUTION_PATH=/home/e/gits/pi-agent-evolution
@@ -34,7 +61,7 @@ PI_AGENT_AUTO_INSTALL=1
 ```
 
 For PowerShell, use a Windows absolute path such as
-`E:\\gits\\pi-agent-evolution`. The launcher bind-mounts it at `/agent`.
+`E:\gits\pi-agent-evolution`. The launcher bind-mounts it at `/agent`.
 
 ## Manifest
 
