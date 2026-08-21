@@ -34,7 +34,16 @@ runtime state, or project-specific secrets in this repository.
 4. Run `/reload` in interactive Pi when necessary.
 5. Exercise the capability against the motivating behavior.
 6. Inspect the diff and retain or revise the candidate.
-7. Commit accepted changes separately with a `capability:` prefix.
+7. For an accepted candidate, commit it separately with a `capability:` prefix,
+   then run `pi-agent-evolution install` to normalize the lock to that commit.
+8. For a rejected candidate, restore or revise its `/agent` files, then run
+   `pi-agent-evolution install` to restore the committed runtime state.
+
+Do not finish capability work with a dirty `/agent` tree. A working-tree
+candidate already installed into `.pi-agent` persists in its runtime volume;
+it is not automatically reverted on restart. Instead, normal startup refuses
+to proceed while the source repository is dirty. Reconcile the candidate by
+committing or restoring it before handoff.
 
 Never edit the installed `.pi-agent` copy as the canonical implementation.
 Never bypass installer drift protection by overwriting runtime files manually.

@@ -126,8 +126,27 @@ For an intentional dirty working tree:
 
 Then use `/reload` and exercise the capability. If it passes, commit the source
 in `/agent` with a focused message such as `capability: improve goal resume
-handling`. If it fails, edit or restore the `/agent` candidate and install it
-again. Startup never opts into a dirty candidate automatically.
+handling`, then normalize the lock:
+
+Inside the running Pi container:
+
+```bash
+git -C /agent add extensions/goal.ts agent.json
+git -C /agent commit -m "capability: improve goal resume handling"
+pi-agent-evolution install
+```
+
+If it fails, restore or revise the source and reinstall the committed state:
+
+```bash
+git -C /agent restore extensions/goal.ts agent.json
+pi-agent-evolution install
+```
+
+Do not end the session with `/agent` dirty. The installed candidate persists
+in the `.pi-agent` volume; restart does not revert it. Automatic startup refuses
+to launch while the source repository remains dirty, which prevents an
+uncommitted candidate from being silently accepted or replaced.
 
 `PI_AGENT_AUTO_INSTALL=0` disables installation during setup and Pi launch;
 the explicit status/install/history commands remain available.

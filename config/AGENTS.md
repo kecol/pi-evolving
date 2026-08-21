@@ -77,9 +77,14 @@ repository-specific development, testing, Git, and handoff instructions.
 
 Develop a capability in `/agent`, test the deliberate working-tree candidate
 with `pi-agent-evolution install --working-tree`, then run `/reload`. After
-verification, commit the focused change with a `capability:` prefix. Normal
-startup installs only clean committed capability state. Never fetch, pull, or
-push automatically.
+verification, either commit the focused change with a `capability:` prefix or
+restore the rejected source. Run `pi-agent-evolution install` afterward to
+normalize the runtime and lock to committed state.
+
+Do not leave `/agent` dirty at handoff. An installed working-tree candidate
+persists in `.pi-agent`; restart does not revert it. Normal startup refuses to
+launch while `/agent` is dirty, so reconcile the candidate first. Never fetch,
+pull, or push automatically.
 
 When capability work finishes, tell the user which files changed, what was
 tested, the `/agent` commit hash and working-tree status, which remotes are
