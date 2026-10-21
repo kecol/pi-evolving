@@ -41,6 +41,8 @@ if ($agentPathRaw) {
     $Script:PiAgentEvolutionPath = ""
 }
 $Script:PiAgentAutoInstall = if ($env:PI_AGENT_AUTO_INSTALL) { $env:PI_AGENT_AUTO_INSTALL } else { "1" }
+$Script:PiReadonlyHostPath = if ($env:PI_READONLY_HOST_PATH) { $env:PI_READONLY_HOST_PATH } else { "" }
+$Script:PiReadonlyContainerPath = if ($env:PI_READONLY_CONTAINER_PATH) { $env:PI_READONLY_CONTAINER_PATH } else { "" }
 $Script:SourceVolume = "pi-evolving-source"
 $Script:AgentVolume = "pi-evolving-agent-state"
 $Script:EvolutionVolume = "pi-evolving-evolution-state"

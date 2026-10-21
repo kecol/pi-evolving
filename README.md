@@ -80,11 +80,49 @@ cd pi-evolving
 Setup creates `.env` from `.env.example`. Provider and model are blank by
 default so Pi can use its normal selection flow. To configure them explicitly,
 first inspect the choices with `./pi.sh PATH --list-models` (or the PowerShell
-equivalent), then edit `PI_PROVIDER` and `PI_MODEL`. Extra arguments pass through:
+equivalent), then edit `PI_PROVIDER` and `PI_MODEL`. Put `--` before Pi arguments
+when also using launcher options:
 
 ```bash
 ./pi.sh ~/work/my-project --some-pi-flag value
 ```
+
+### Read-only reference directories
+
+Mount a host directory for Pi to inspect without allowing container writes:
+
+```bash
+./pi.sh /path/to/project \
+  --read-only-mount /path/to/reference /reference
+```
+
+```powershell
+.\pi.ps1 C:\path\to\project `
+  --read-only-mount C:\path\to\reference /reference
+```
+
+The option is repeatable. If Pi arguments follow launcher options, separate
+them explicitly:
+
+```bash
+./pi.sh /path/to/project \
+  --read-only-mount /path/to/reference /reference \
+  -- --some-pi-flag value
+```
+
+For a reference mounted on every launch, configure both `.env` values. Relative
+host paths resolve from the `pi-evolving` checkout:
+
+```dotenv
+PI_READONLY_HOST_PATH=../reference-project
+PI_READONLY_CONTAINER_PATH=/reference
+```
+
+Read-only prevents writes from the container; it does not prevent Pi from
+reading or disclosing file contents. Do not mount directories containing
+credentials or other data Pi should not inspect. Managed locations such as
+`/workspace`, `/agent`, `/pi`, `/evolution`, and `/home/pi` cannot be used as
+read-only targets.
 
 ## What persists
 

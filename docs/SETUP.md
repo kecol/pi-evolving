@@ -23,6 +23,11 @@ v1 defaults to the predictable `1001:1001` volume ownership model.
 harness root. Its default, `../pi-agent-evolution`, creates a sibling local Git
 repository. Set it to an empty value to disable agent evolution.
 
+`PI_READONLY_HOST_PATH` and `PI_READONLY_CONTAINER_PATH` define one optional
+read-only reference mount used on every Pi launch. Configure both or neither.
+Relative host paths resolve from the harness root. Additional one-off mounts
+use the repeatable `--read-only-mount HOST_PATH CONTAINER_PATH` launcher option.
+
 ## What setup does
 
 Setup checks Docker, safely initializes or reuses the configured agent
@@ -91,6 +96,10 @@ npm run check
 
 The launcher additionally bind-mounts an absolute host project at `/workspace`,
 publishes `127.0.0.1:9191:9191`, and runs `/pi/pi-test.sh` through `tini`.
+
+Read-only references are mounted with Docker's `:ro` bind-mount mode. They
+prevent container writes but still expose all readable content to Pi. The
+launcher rejects targets overlapping its managed paths and duplicate targets.
 
 ## Maintenance and updates
 
